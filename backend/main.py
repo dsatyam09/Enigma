@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     await write_queue.drain_queue(WriteSessionLocal)
 
 
-app = FastAPI(title="LuddyHack Auth API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Enigma Leaderboard API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

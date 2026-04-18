@@ -1,8 +1,9 @@
-# Track only the frontend and backend folders for now
+# Track only the frontend/backend folders and the API spec for now
 /*
 !/.gitignore
 !/frontend/
 !/backend/
+!/leaderboard-api.yaml
 
 # Inside frontend/
 frontend/node_modules/

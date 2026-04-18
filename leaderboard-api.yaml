@@ -1,0 +1,436 @@
+openapi: 3.1.0
+info:
+  title: Enigma Leaderboard API
+  version: 1.0.0
+  description: |
+    Real-time leaderboard service for Luddy Hacks 2026. Maintains an
+    in-memory ranking (skiplist) backed by Postgres via a write-ahead
+    audit log, which is replayed into memory on startup. Exposes
+    endpoints to add entries, remove entries, fetch the top 10, and
+    query aggregate statistics, plus observability endpoints for
+    performance measurement and stress testing.
+  contact:
+    name: Enigma Team
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: http://18.234.66.87:8000
+    description: Deployed server
+
+tags:
+  - name: leaderboard
+    description: Core leaderboard operations (required by the hackathon spec)
+  - name: audit
+    description: Historical record of add/remove operations
+  - name: observability
+    description: Per-endpoint latency metrics and built-in stress test runner
+  - name: health
+    description: Liveness probe
+
+paths:
+  /add:
+    post:
+      tags: [leaderboard]
+      summary: Add a new player rating entry
+      description: |
+        Writes the entry to the in-memory store immediately and enqueues a
+        durable write to the Postgres `audit_log` table. Multiple entries
+        per player are allowed; the leaderboard uses the most recent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddRequest"
+      responses:
+        "201":
+          description: Entry added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatingResponse"
+        "422":
+          description: Validation error (missing player_name, blank string, or rating < 0)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationError"
+
+  /remove:
+    delete:
+      tags: [leaderboard]
+      summary: Remove a player's entry
+      description: |
+        Removes the most recent `add` entry for the given player from the
+        in-memory store and enqueues a `remove` row in the audit log. If
+        `rating` is supplied, only an entry matching both player and rating
+        is considered. The Postgres `audit_log` table is the source of
+        truth for deciding what exists.
+      parameters:
+        - in: query
+          name: player_name
+          required: true
+          schema:
+            type: string
+          description: Player whose entry should be removed
+        - in: query
+          name: rating
+          required: false
+          schema:
+            type: integer
+          description: Specific rating value to match; omit to remove the most recent entry
+      responses:
+        "200":
+          description: Entry removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RemoveResponse"
+        "404":
+          description: No matching entry found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+
+  /leaderboard:
+    get:
+      tags: [leaderboard]
+      summary: Get the top 10 players by rating
+      description: Returns the top 10 entries from the in-memory skiplist, ordered by rating (highest first).
+      responses:
+        "200":
+          description: Top 10 entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RatingResponse"
+
+  /info:
+    get:
+      tags: [leaderboard]
+      summary: Aggregate statistics over all entries
+      description: |
+        Returns descriptive statistics (count, mean, median, std dev,
+        min/max, quartiles, IQR), a 10-bucket histogram of the score
+        distribution, and per-player percentile rank.
+      responses:
+        "200":
+          description: Aggregate stats snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InfoResponse"
+        "404":
+          description: No entries exist yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+
+  /history:
+    get:
+      tags: [audit]
+      summary: Query the audit log of add/remove operations
+      description: Returns audit log entries ordered by timestamp descending, optionally filtered by player or time range.
+      parameters:
+        - in: query
+          name: player_name
+          required: false
+          schema:
+            type: string
+          description: Filter to a single player
+        - in: query
+          name: from_date
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Return entries on or after this ISO-8601 timestamp
+        - in: query
+          name: to_date
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Return entries on or before this ISO-8601 timestamp
+      responses:
+        "200":
+          description: Matching audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogResponse"
+
+  /performance:
+    get:
+      tags: [observability]
+      summary: Per-endpoint latency statistics
+      description: Returns average, min, max latency (ms) and request counts for every endpoint served since process start.
+      responses:
+        "200":
+          description: Latency stats keyed by request path
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: "#/components/schemas/PerformanceEntry"
+
+  /stress-test:
+    post:
+      tags: [observability]
+      summary: Run a Locust stress test against this server
+      description: |
+        Kicks off a Locust run using the bundled `locustfile.py` and blocks
+        until it completes. Clients must allow at least
+        `run_time_seconds + 30s` before timing out.
+      parameters:
+        - in: query
+          name: users
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+          description: Peak concurrent users to simulate
+        - in: query
+          name: spawn_rate
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Users spawned per second
+        - in: query
+          name: run_time_seconds
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 120
+            default: 30
+          description: Duration of the load test in seconds
+      responses:
+        "200":
+          description: Stress test results summary
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: A parameter is outside the allowed range
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+
+  /stress-test/report:
+    get:
+      tags: [observability]
+      summary: Fetch the most recent Locust HTML report
+      responses:
+        "200":
+          description: HTML report from the last stress test run
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: No report has been generated yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPError"
+
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+components:
+  schemas:
+    AddRequest:
+      type: object
+      required: [player_name, rating]
+      properties:
+        player_name:
+          type: string
+          minLength: 1
+          example: alice
+        rating:
+          type: integer
+          minimum: 0
+          example: 1500
+
+    RatingResponse:
+      type: object
+      required: [player_name, rating, timestamp]
+      properties:
+        player_name:
+          type: string
+          example: alice
+        rating:
+          type: integer
+          example: 1500
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-04-18T14:32:10.123Z"
+
+    RemoveResponse:
+      type: object
+      required: [message, player_name]
+      properties:
+        message:
+          type: string
+          example: Entry removed
+        player_name:
+          type: string
+          example: alice
+
+    InfoResponse:
+      type: object
+      required:
+        - count
+        - mean
+        - median
+        - std_dev
+        - min
+        - max
+        - q1
+        - q3
+        - iqr
+        - score_distribution
+        - percentile_ranks
+      properties:
+        count:
+          type: integer
+          example: 1234
+        mean:
+          type: number
+          example: 1487.32
+        median:
+          type: number
+          example: 1490.0
+        std_dev:
+          type: number
+          example: 210.55
+        min:
+          type: number
+          example: 400
+        max:
+          type: number
+          example: 2800
+        q1:
+          type: number
+          example: 1320.0
+        q3:
+          type: number
+          example: 1660.0
+        iqr:
+          type: number
+          example: 340.0
+        score_distribution:
+          type: array
+          description: 10-bucket histogram of rating values
+          items:
+            type: object
+            required: [range, count]
+            properties:
+              range:
+                type: string
+                example: "1400.0–1560.0"
+              count:
+                type: integer
+                example: 212
+        percentile_ranks:
+          type: object
+          description: Map of player name to percentile rank (0–100)
+          additionalProperties:
+            type: number
+          example:
+            alice: 99.5
+            bob: 45.0
+
+    AuditLogResponse:
+      type: object
+      required: [player_name, rating, operation, timestamp]
+      properties:
+        player_name:
+          type: string
+          example: alice
+        rating:
+          type: integer
+          example: 1500
+        operation:
+          type: string
+          enum: [add, remove]
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-04-18T14:32:10.123Z"
+
+    PerformanceEntry:
+      type: object
+      required: [avg_ms, min_ms, max_ms, requests]
+      properties:
+        avg_ms:
+          type: number
+          example: 2.143
+        min_ms:
+          type: number
+          example: 0.512
+        max_ms:
+          type: number
+          example: 18.904
+        requests:
+          type: integer
+          example: 5821
+
+    HTTPError:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          example: Entry not found
+
+    ValidationError:
+      type: object
+      description: FastAPI/Pydantic validation error response
+      required: [detail]
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            required: [loc, msg, type]
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string
