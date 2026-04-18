@@ -20,9 +20,5 @@ backend/*.pyc
 backend/.env
 backend/.env.*
 !backend/.env.example
-backend/populate_ratings.py
-backend/test_stats.py
-backend/locustfile.py
-
 # OS
 .DS_Store
