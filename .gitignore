@@ -1,9 +1,13 @@
-# Track only the frontend/backend folders and the API spec for now
 /*
 !/.gitignore
+!/.env.example
+!/README.md
+!/docker-compose.yml
+!/openapi.yaml
+!/schema.sql
+!/start.sh
 !/frontend/
 !/backend/
-!/leaderboard-api.yaml
 
 # Inside frontend/
 frontend/node_modules/
