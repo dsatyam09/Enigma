@@ -1,7 +1,8 @@
-# Track only the frontend folder for now
+# Track only the frontend and backend folders for now
 /*
 !/.gitignore
 !/frontend/
+!/backend/
 
 # Inside frontend/
 frontend/node_modules/
@@ -10,6 +11,18 @@ frontend/dist-ssr/
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+
+# Inside backend/
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/populate_ratings.py
+backend/test_stats.py
+backend/locustfile.py
 
 # OS
 .DS_Store
