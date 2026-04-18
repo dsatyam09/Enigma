@@ -23,7 +23,6 @@ Full-stack leaderboard app — FastAPI backend + React/Vite frontend.
 |---|---|---|
 | `DB_PASSWORD` | Password for the Postgres `app` user | `s3cr3t_pw` |
 | `DATABASE_URL` | Full asyncpg connection string — set automatically by Compose when using the bundled `db` service | `postgresql+asyncpg://app:s3cr3t_pw@db:5432/leaderboard` |
-| `SECRET_KEY` | HS256 signing key for JWTs (≥32 random chars) | `openssl rand -hex 32` |
 | `APP_ALLOWED_ORIGINS` | Comma-separated CORS origins for the frontend | `http://your-ec2-ip` |
 | `DATABASE_READ_URL` | Optional read-replica URL; falls back to `DATABASE_URL` when empty | _(leave blank)_ |
 | `REDIS_URL` | Optional Redis URL; cache silently degrades when empty | _(leave blank)_ |

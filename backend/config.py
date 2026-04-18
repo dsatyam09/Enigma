@@ -20,7 +20,6 @@ def load_app_env() -> None:
 def get_allowed_origins() -> list[str]:
     raw_origins = os.getenv("APP_ALLOWED_ORIGINS", "")
     parsed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
-    print(parsed_origins)
     return parsed_origins or DEFAULT_ALLOWED_ORIGINS.copy()
 
 
