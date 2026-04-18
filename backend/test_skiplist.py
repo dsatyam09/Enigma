@@ -9,8 +9,6 @@ def make_sl(*entries: tuple[str, float]) -> SkipList:
     return sl
 
 
-# ── length ────────────────────────────────────────────────────────────────────
-
 def test_empty_length():
     assert SkipList().length == 0
 
@@ -19,8 +17,6 @@ def test_length_after_inserts():
     sl = make_sl(("alice", 100), ("bob", 200), ("carol", 150))
     assert sl.length == 3
 
-
-# ── top_k ─────────────────────────────────────────────────────────────────────
 
 def test_top_k_descending_order():
     sl = make_sl(("alice", 100), ("bob", 300), ("carol", 200))
@@ -45,8 +41,6 @@ def test_top_k_single():
     sl = make_sl(("only", 42))
     assert sl.top_k(1) == [("only", 42.0)]
 
-
-# ── insert / delete ───────────────────────────────────────────────────────────
 
 def test_delete_existing():
     sl = make_sl(("alice", 100), ("bob", 200))
@@ -75,8 +69,6 @@ def test_delete_then_reinsert():
     assert sl.top_k(1) == [("alice", 200.0)]
 
 
-# ── get_rank ──────────────────────────────────────────────────────────────────
-
 def test_rank_basic():
     sl = make_sl(("alice", 100), ("bob", 300), ("carol", 200))
     assert sl.get_rank("bob", 300.0) == 1
@@ -101,8 +93,6 @@ def test_rank_not_found():
     assert sl.get_rank("ghost", 999.0) == -1
 
 
-# ── tie-breaking (same score, alphabetical) ───────────────────────────────────
-
 def test_tie_breaking_top_k():
     sl = make_sl(("zebra", 100), ("apple", 100), ("mango", 100))
     result = sl.top_k(3)
@@ -120,8 +110,6 @@ def test_tie_breaking_rank():
     assert sl.get_rank("mango", 100.0) == 2
     assert sl.get_rank("apple", 100.0) == 3
 
-
-# ── rank consistency with many entries ───────────────────────────────────────
 
 def test_rank_consistency():
     entries = [("a", 50), ("b", 80), ("c", 30), ("d", 70), ("e", 60)]

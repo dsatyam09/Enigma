@@ -3,8 +3,6 @@ import pytest
 from stats import RunningStats, quickselect, percentile
 
 
-# ── RunningStats (Welford's algorithm) ────────────────────────────────────────
-
 def test_single_update():
     rs = RunningStats()
     rs.update(42)
@@ -95,8 +93,6 @@ def test_welford_numerical_stability():
     assert abs(rs.variance - 2.0) < 1e-6
 
 
-# ── quickselect ───────────────────────────────────────────────────────────────
-
 def test_quickselect_min():
     arr = [3, 1, 4, 1, 5, 9, 2, 6]
     assert quickselect(arr, 0) == 1.0
@@ -140,8 +136,6 @@ def test_quickselect_reverse_sorted():
     for k in range(10):
         assert quickselect(arr, k) == float(k)
 
-
-# ── percentile ────────────────────────────────────────────────────────────────
 
 def test_percentile_median_odd():
     assert percentile([1, 2, 3, 4, 5], 50) == 3.0

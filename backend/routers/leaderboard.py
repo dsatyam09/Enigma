@@ -30,8 +30,6 @@ async def startup_replay(db: AsyncSession) -> None:
             await store.remove(row.player_name)
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
-
 class AddRequest(BaseModel):
     player_name: str = Field(..., min_length=1)
     rating: int = Field(..., ge=0)
@@ -54,8 +52,6 @@ class AuditLogResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _score_distribution(
     scores: list[float], min_val: float, max_val: float, buckets: int = 10
 ) -> list[dict]:
@@ -73,8 +69,6 @@ def _score_distribution(
         result.append({"range": f"{b_lo:.1f}–{b_hi:.1f}", "count": count})
     return result
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/add", status_code=status.HTTP_201_CREATED, response_model=RatingResponse)
 async def add_entry(body: AddRequest):
