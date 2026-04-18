@@ -2,14 +2,28 @@
 
 Dynamic leaderboard built in 24 hours. FastAPI + Postgres on the backend, React + Vite on the frontend.
 
-[![Live Demo](https://img.shields.io/badge/Try%20it-Live%20Demo-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://leaderboard-black-two.vercel.app/leaderboard)
-[![API Docs](https://img.shields.io/badge/API%20Docs-Swagger%20UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://18.234.66.87:8000/docs)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20App-6366F1?style=for-the-badge&logo=vercel&logoColor=white)](https://leaderboard-black-two.vercel.app/leaderboard)
+[![Swagger UI](https://img.shields.io/badge/Swagger%20UI-Open%20Docs-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://18.234.66.87:8000/docs)
+[![YouTube Video](https://img.shields.io/badge/YouTube-Watch%20Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](YOUR_YOUTUBE_URL)
+
+<p align="center">
+  <img src="./demo.gif" alt="Leaderboard demo" width="720" />
+</p>
 
 > The frontend is hosted on **Vercel**. The backend (FastAPI + Postgres in Docker Compose) runs on an **AWS EC2 t2.micro**, Ubuntu 24.04. Both links above are live — click them.
 
 ## The problem
 
-A user submits a score, the server keeps a ranking, and the leaderboard endpoint returns the top 10. Endpoints we expose:
+The brief is a "dynamic leaderboard", which on the surface is a CRUD app. We reframed it around a concrete scaling scenario: **a chess platform leaderboard**.
+
+Imagine a site like Chess.com or Lichess — tens of millions of players, every finished game updates two ratings (both players', via ELO), and every player wants to see their rank the moment the game ends. At that scale the naive implementation falls apart in two specific places:
+
+- **`/info` aggregate stats.** Mean, standard deviation, quartiles, percentile ranks across every player means a full table scan. Slow, and it gets slower as the table grows.
+- **Concurrent reads + writes on the same sorted index.** Every finished game is a write; every player checking their rank is a read. Serializing them through a single SQL `ORDER BY` becomes the bottleneck.
+
+Top-10 alone is cheap if you have a `rating` index — Postgres will happily serve that. The interesting work is everything else: keeping running statistics fresh without re-scanning, answering "what's player X's percentile" in log-time, and letting thousands of reads run while writes are still arriving. That's the problem we actually built for.
+
+## Endpoints
 
 | Endpoint | Method | What it does |
 |---|---|---|
@@ -26,7 +40,7 @@ The full OpenAPI 3.1 spec is in [`openapi.yaml`](./openapi.yaml).
 
 ## Our approach
 
-The shortest possible solve here is a single `ORDER BY rating DESC LIMIT 10` on every read. We didn't want that — we wanted `/leaderboard` and `/info` to stay fast even with a large dataset and concurrent writes. So:
+Given the chess-scale framing above, we optimised for the paths that actually hurt at scale — aggregate stats, per-player rank, and read/write concurrency — rather than the path that's already cheap (top-10 with an index). The mechanics:
 
 - **Custom skip list** for the ranking. O(log N) insert, delete, and rank-of queries. Each level pointer carries a span count so per-player percentile in `/info` is cheap.
 - **Welford's algorithm** for the running mean and standard deviation — O(1) per `/add`, no recomputing.

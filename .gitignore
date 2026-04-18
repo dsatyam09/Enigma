@@ -2,6 +2,7 @@
 !/.gitignore
 !/.env.example
 !/README.md
+!/demo.gif
 !/docker-compose.yml
 !/openapi.yaml
 !/schema.sql
