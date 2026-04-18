@@ -1,4 +1,4 @@
-# Luddy Hacks 2026 — Team Enigma
+# Luddy Hacks 2026 : Team Enigma
 
 Dynamic leaderboard built in 24 hours. FastAPI + Postgres on the backend, React + Vite on the frontend.
 
@@ -16,18 +16,18 @@ YouTube:    YOUR_YOUTUBE_URL
   <img src="./demo.gif" alt="Leaderboard demo" width="720" />
 </p>
 
-> The frontend is hosted on **Vercel**. The backend (FastAPI + Postgres in Docker Compose) runs on an **AWS EC2 t2.micro**, Ubuntu 24.04. Both links above are live — click them.
+> The frontend is hosted on **Vercel**. The backend (FastAPI + Postgres in Docker Compose) runs on an **AWS EC2 t2.micro**, Ubuntu 24.04. Both links above are live (click them).
 
 ## The problem
 
 The brief is a "dynamic leaderboard", which on the surface is a CRUD app. We reframed it around a concrete scaling scenario: **a chess platform leaderboard**.
 
-Imagine a site like Chess.com or Lichess — tens of millions of players, every finished game updates two ratings (both players', via ELO), and every player wants to see their rank the moment the game ends. At that scale the naive implementation falls apart in two specific places:
+Imagine a site like Chess.com or Lichess, tens of millions of players, every finished game updates two ratings (both players', via ELO), and every player wants to see their rank the moment the game ends. At that scale the naive implementation falls apart in two specific places:
 
 - **`/info` aggregate stats.** Mean, standard deviation, quartiles, percentile ranks across every player means a full table scan. Slow, and it gets slower as the table grows.
 - **Concurrent reads + writes on the same sorted index.** Every finished game is a write; every player checking their rank is a read. Serializing them through a single SQL `ORDER BY` becomes the bottleneck.
 
-Top-10 alone is cheap if you have a `rating` index — Postgres will happily serve that. The interesting work is everything else: keeping running statistics fresh without re-scanning, answering "what's player X's percentile" in log-time, and letting thousands of reads run while writes are still arriving. That's the problem we actually built for.
+Top-10 alone is cheap if you have a `rating` index, Postgres will happily serve that. The interesting work is everything else: keeping running statistics fresh without re-scanning, answering "what's player X's percentile" in log-time, and letting thousands of reads run while writes are still arriving. That's the problem we actually built for.
 
 ## Endpoints
 
@@ -46,7 +46,7 @@ The full OpenAPI 3.1 spec is in [`openapi.yaml`](./openapi.yaml).
 
 ## Our approach
 
-Given the chess-scale framing above, we optimised for the paths that actually hurt at scale — aggregate stats, per-player rank, and read/write concurrency — rather than the path that's already cheap (top-10 with an index). The mechanics:
+Given the chess-scale framing above, we optimised for the paths that actually hurt at scale, aggregate stats, per-player rank, and read/write concurrency rather than the path that's already cheap (top-10 with an index). The mechanics:
 
 - **Custom skip list** for the ranking. O(log N) insert, delete, and rank-of queries. Each level pointer carries a span count so per-player percentile in `/info` is cheap.
 - **Welford's algorithm** for the running mean and standard deviation — O(1) per `/add`, no recomputing.
@@ -54,7 +54,7 @@ Given the chess-scale framing above, we optimised for the paths that actually hu
 - **In-memory store backed by a Postgres audit log.** Postgres is the durable source of truth; the in-memory skip list is the live query index. On boot we replay the audit log to rebuild the index (write-ahead log pattern).
 - **Async reader-writer lock** so reads run concurrently and writes are exclusive.
 - **Write queue + background flusher** so `/add` returns to the client immediately and the DB write happens in the background.
-- **`/stress-test` runs Locust in-process** — hit it from Swagger to load-test the running server, then view the HTML report at `/stress-test/report`.
+- **`/stress-test` runs Locust in-process** hit it from Swagger to load-test the running server, then view the HTML report at `/stress-test/report`.
 
 The in-memory + audit log split is what lets reads stay sub-millisecond under heavy write load.
 
