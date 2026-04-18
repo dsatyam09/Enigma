@@ -2,9 +2,15 @@
 
 Dynamic leaderboard built in 24 hours. FastAPI + Postgres on the backend, React + Vite on the frontend.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20App-6366F1?style=for-the-badge&logo=vercel&logoColor=white)](https://leaderboard-black-two.vercel.app/leaderboard)
-[![Swagger UI](https://img.shields.io/badge/Swagger%20UI-Open%20Docs-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://18.234.66.87:8000/docs)
-[![YouTube Video](https://img.shields.io/badge/YouTube-Watch%20Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](YOUR_YOUTUBE_URL)
+[![Open App](https://img.shields.io/badge/Open%20App-3B82F6?style=for-the-badge&logo=vercel&logoColor=white)](https://leaderboard-black-two.vercel.app/leaderboard)
+[![Swagger UI](https://img.shields.io/badge/Swagger%20UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://18.234.66.87:8000/docs)
+[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](YOUR_YOUTUBE_URL)
+
+```
+Live App:   https://leaderboard-black-two.vercel.app/leaderboard
+Swagger UI: http://18.234.66.87:8000/docs
+YouTube:    YOUR_YOUTUBE_URL
+```
 
 <p align="center">
   <img src="./demo.gif" alt="Leaderboard demo" width="720" />
