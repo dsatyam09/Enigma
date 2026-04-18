@@ -4,7 +4,7 @@ Dynamic leaderboard built in 24 hours. FastAPI + Postgres on the backend, React 
 
 [![Open App](https://img.shields.io/badge/Open%20App-3B82F6?style=for-the-badge&logo=vercel&logoColor=white)](https://leaderboard-black-two.vercel.app/leaderboard)
 [![Swagger UI](https://img.shields.io/badge/Swagger%20UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://18.234.66.87:8000/docs)
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)]([YOUR_YOUTUBE_URL](https://www.youtube.com/watch?v=avmymBZX5AY))
+[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=avmymBZX5AY)
 
 ```
 Live App:   https://leaderboard-black-two.vercel.app/leaderboard
